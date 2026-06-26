@@ -61,3 +61,6 @@ Generated\ Files/
 
 # Transient build props injected by BuildAndRun.ps1
 Directory.Build.props
+
+# Development certificate
+devcert.pfx
