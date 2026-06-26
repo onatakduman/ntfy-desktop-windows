@@ -10,15 +10,15 @@
   IgnorableNamespaces="uap rescap com desktop">
 
   <Identity
-    Name="4528EB47-B18E-49F2-84F3-616FC1163BEA"
-    Publisher="CN=AppPublisher"
+    Name="58269ONATAKDUMAN.ntfy"
+    Publisher="CN=1C37C9C5-14A1-478D-AE90-10F709E5CBF1"
     Version="1.0.0.0" />
 
   <mp:PhoneIdentity PhoneProductId="4528EB47-B18E-49F2-84F3-616FC1163BEA" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
   <Properties>
     <DisplayName>ntfy</DisplayName>
-    <PublisherDisplayName>AppPublisher</PublisherDisplayName>
+    <PublisherDisplayName>ONAT AKDUMAN</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
 
