@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "NtfyDesktop (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "NtfyDesktop (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

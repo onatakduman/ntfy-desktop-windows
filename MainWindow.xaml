@@ -1,0 +1,281 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Window
+    x:Class="NtfyDesktop.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:helpers="using:NtfyDesktop.Views"
+    xmlns:local="using:NtfyDesktop"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:tb="using:H.NotifyIcon"
+    xmlns:views="using:NtfyDesktop.Views"
+    xmlns:vm="using:NtfyDesktop.ViewModels"
+    Title="ntfy"
+    mc:Ignorable="d">
+
+    <Grid x:Name="RootGrid" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <TitleBar
+            x:Name="AppTitleBar"
+            Title="ntfy"
+            Grid.Row="0">
+            <TitleBar.IconSource>
+                <ImageIconSource ImageSource="Assets/AppIcon.ico" />
+            </TitleBar.IconSource>
+        </TitleBar>
+
+        <!--
+            Sidebar uses a ListView (not NavigationView.MenuItems): NavigationView's
+            MenuItemsSource + MenuItemTemplateSelector native-crashes (access violation)
+            when the bound collection is mutated on subscribe/unsubscribe. A ListView
+            handles a dynamic ObservableCollection + DataTemplateSelector safely.
+        -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="300" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Grid.Resources>
+                <DataTemplate x:Key="NavHeaderTemplate" x:DataType="vm:NavEntry">
+                    <TextBlock
+                        Margin="0,8,0,2"
+                        Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                        Style="{StaticResource CaptionTextBlockStyle}"
+                        Text="{x:Bind HeaderText}" />
+                </DataTemplate>
+
+                <DataTemplate x:Key="NavItemTemplate" x:DataType="vm:NavEntry">
+                    <Grid Height="44" ColumnSpacing="12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <!--  Section header row (e.g. "Subscribed topics")  -->
+                        <TextBlock
+                            Grid.Column="0"
+                            Grid.ColumnSpan="3"
+                            VerticalAlignment="Center"
+                            Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                            Style="{StaticResource CaptionTextBlockStyle}"
+                            Text="{x:Bind HeaderText}"
+                            Visibility="{x:Bind helpers:XamlHelpers.BoolToVisibility(IsHeader)}" />
+
+                        <Grid
+                            Grid.Column="0"
+                            Width="30"
+                            Height="30"
+                            VerticalAlignment="Center"
+                            Background="{x:Bind AvatarBrush}"
+                            CornerRadius="15"
+                            Visibility="{x:Bind helpers:XamlHelpers.InvertBoolToVisibility(IsHeader)}">
+                            <TextBlock
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Foreground="White"
+                                Style="{StaticResource CaptionTextBlockStyle}"
+                                Text="{x:Bind AvatarLetter}"
+                                Visibility="{x:Bind helpers:XamlHelpers.InvertBoolToVisibility(IsAll)}" />
+                            <FontIcon
+                                FontSize="14"
+                                Foreground="White"
+                                Glyph="&#xE8BD;"
+                                Visibility="{x:Bind helpers:XamlHelpers.BoolToVisibility(IsAll)}" />
+                        </Grid>
+
+                        <TextBlock
+                            Grid.Column="1"
+                            VerticalAlignment="Center"
+                            Text="{x:Bind Title, Mode=OneWay}"
+                            TextTrimming="CharacterEllipsis"
+                            Visibility="{x:Bind helpers:XamlHelpers.InvertBoolToVisibility(IsHeader)}" />
+
+                        <StackPanel
+                            Grid.Column="2"
+                            VerticalAlignment="Center"
+                            Orientation="Horizontal"
+                            Spacing="6"
+                            Visibility="{x:Bind helpers:XamlHelpers.InvertBoolToVisibility(IsHeader)}">
+                            <FontIcon
+                                FontSize="13"
+                                Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                Glyph="&#xE74F;"
+                                Visibility="{x:Bind helpers:XamlHelpers.BoolToVisibility(IsMuted), Mode=OneWay}" />
+                            <InfoBadge
+                                Value="{x:Bind UnreadCount, Mode=OneWay}"
+                                Visibility="{x:Bind helpers:XamlHelpers.BoolToVisibility(HasUnread), Mode=OneWay}" />
+                            <Ellipse
+                                Width="8"
+                                Height="8"
+                                Fill="{x:Bind StatusBrush, Mode=OneWay}"
+                                Visibility="{x:Bind helpers:XamlHelpers.BoolToVisibility(ShowStatusDot)}" />
+                            <Button
+                                Width="30"
+                                Height="30"
+                                Padding="0"
+                                Style="{StaticResource SubtleButtonStyle}"
+                                ToolTipService.ToolTip="More"
+                                Visibility="{x:Bind helpers:XamlHelpers.BoolToVisibility(IsTopic)}">
+                                <FontIcon FontSize="14" Glyph="&#xE712;" />
+                                <Button.Flyout>
+                                    <MenuFlyout>
+                                        <MenuFlyoutItem Click="Rename_Click" Text="Change display name">
+                                            <MenuFlyoutItem.Icon>
+                                                <FontIcon Glyph="&#xE70F;" />
+                                            </MenuFlyoutItem.Icon>
+                                        </MenuFlyoutItem>
+                                        <MenuFlyoutItem Click="SendTest_Click" Text="Send test notification">
+                                            <MenuFlyoutItem.Icon>
+                                                <FontIcon Glyph="&#xE724;" />
+                                            </MenuFlyoutItem.Icon>
+                                        </MenuFlyoutItem>
+                                        <MenuFlyoutItem Click="ClearTopic_Click" Text="Clear all notifications">
+                                            <MenuFlyoutItem.Icon>
+                                                <FontIcon Glyph="&#xE74D;" />
+                                            </MenuFlyoutItem.Icon>
+                                        </MenuFlyoutItem>
+                                        <MenuFlyoutItem Click="Mute_Click" Text="{x:Bind MuteLabel, Mode=OneWay}">
+                                            <MenuFlyoutItem.Icon>
+                                                <FontIcon Glyph="&#xE767;" />
+                                            </MenuFlyoutItem.Icon>
+                                        </MenuFlyoutItem>
+                                        <MenuFlyoutSeparator />
+                                        <MenuFlyoutItem Click="Unsubscribe_Click" Text="Unsubscribe">
+                                            <MenuFlyoutItem.Icon>
+                                                <FontIcon Glyph="&#xE711;" />
+                                            </MenuFlyoutItem.Icon>
+                                        </MenuFlyoutItem>
+                                    </MenuFlyout>
+                                </Button.Flyout>
+                            </Button>
+                        </StackPanel>
+                    </Grid>
+                </DataTemplate>
+
+                <views:NavItemTemplateSelector
+                    x:Key="NavSelector"
+                    HeaderTemplate="{StaticResource NavHeaderTemplate}"
+                    ItemTemplate="{StaticResource NavItemTemplate}" />
+            </Grid.Resources>
+
+            <!--  Sidebar: subscribe (top) + topic list + footer actions  -->
+            <Grid Grid.Column="0" Background="{ThemeResource LayerOnMicaBaseAltFillColorDefaultBrush}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <!--  Subscribe to topic: primary action, pinned to the top.  -->
+                <Button
+                    Grid.Row="0"
+                    Margin="8,8,8,4"
+                    HorizontalAlignment="Stretch"
+                    AutomationProperties.AutomationId="SubscribeButton"
+                    Click="Subscribe_Click"
+                    Style="{StaticResource AccentButtonStyle}">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon FontSize="14" Glyph="&#xE710;" />
+                        <TextBlock Text="Subscribe to topic" />
+                    </StackPanel>
+                </Button>
+
+                <ListView
+                    x:Name="TopicList"
+                    Grid.Row="1"
+                    Padding="4,4"
+                    ItemContainerTransitions="{x:Null}"
+                    ItemTemplateSelector="{StaticResource NavSelector}"
+                    ItemsSource="{x:Bind ViewModel.Entries}"
+                    SelectedItem="{x:Bind ViewModel.SelectedEntry, Mode=TwoWay}"
+                    SelectionMode="Single">
+                    <ListView.ItemContainerStyle>
+                        <Style TargetType="ListViewItem">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                            <Setter Property="Padding" Value="8,0" />
+                            <Setter Property="MinHeight" Value="0" />
+                        </Style>
+                    </ListView.ItemContainerStyle>
+                </ListView>
+
+                <StackPanel Grid.Row="2" Margin="8" Spacing="6">
+                    <!--  Publish: prominent, with a one-line hint.  -->
+                    <Button
+                        Padding="12,10"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Left"
+                        AutomationProperties.AutomationId="PublishButton"
+                        Click="Publish_Click">
+                        <Grid ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <FontIcon
+                                Grid.Column="0"
+                                VerticalAlignment="Center"
+                                FontSize="18"
+                                Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                Glyph="&#xE724;" />
+                            <StackPanel Grid.Column="1" Spacing="1">
+                                <TextBlock Text="Publish notification" />
+                                <TextBlock
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    Style="{StaticResource CaptionTextBlockStyle}"
+                                    Text="Send a message to a topic" />
+                            </StackPanel>
+                        </Grid>
+                    </Button>
+                    <Button
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Left"
+                        AutomationProperties.AutomationId="SettingsButton"
+                        Click="Settings_Click"
+                        Style="{StaticResource SubtleButtonStyle}">
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                            <FontIcon FontSize="16" Glyph="&#xE713;" />
+                            <TextBlock Text="Settings" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+
+            <!--  Content: topic feed or settings  -->
+            <Grid Grid.Column="1">
+                <views:TopicView Visibility="{x:Bind helpers:XamlHelpers.BoolToVisibility(ViewModel.ShowContent), Mode=OneWay}" />
+                <views:SettingsView Visibility="{x:Bind helpers:XamlHelpers.BoolToVisibility(ViewModel.ShowSettings), Mode=OneWay}" />
+            </Grid>
+        </Grid>
+
+        <tb:TaskbarIcon
+            x:Name="TrayIcon"
+            Grid.Row="0"
+            ContextMenuMode="SecondWindow"
+            IconSource="Assets/AppIcon.ico"
+            LeftClickCommand="{x:Bind ShowCommand}"
+            NoLeftClickDelay="True"
+            ToolTipText="ntfy">
+            <tb:TaskbarIcon.ContextFlyout>
+                <MenuFlyout>
+                    <MenuFlyoutItem Click="TrayOpen_Click" Text="Open">
+                        <MenuFlyoutItem.Icon>
+                            <FontIcon Glyph="&#xE8A7;" />
+                        </MenuFlyoutItem.Icon>
+                    </MenuFlyoutItem>
+                    <MenuFlyoutSeparator />
+                    <MenuFlyoutItem Click="TrayExit_Click" Text="Exit">
+                        <MenuFlyoutItem.Icon>
+                            <FontIcon Glyph="&#xE7E8;" />
+                        </MenuFlyoutItem.Icon>
+                    </MenuFlyoutItem>
+                </MenuFlyout>
+            </tb:TaskbarIcon.ContextFlyout>
+        </tb:TaskbarIcon>
+    </Grid>
+</Window>

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Application
+    x:Class="NtfyDesktop.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:NtfyDesktop">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
+                <ResourceDictionary>
+                    <ResourceDictionary.ThemeDictionaries>
+                        <!--  ntfy brand green (matches the web app's primary colour)  -->
+                        <ResourceDictionary x:Key="Light">
+                            <Color x:Key="NtfyAccentColor">#33A474</Color>
+                            <SolidColorBrush x:Key="NtfyAccentBrush" Color="#33A474" />
+                            <SolidColorBrush x:Key="NtfyAccentHoverBrush" Color="#2C8C62" />
+                            <SolidColorBrush x:Key="NtfyAccentTextBrush" Color="#FFFFFF" />
+                            <!--  Recolour the system accent to ntfy green for all accent controls.  -->
+                            <SolidColorBrush x:Key="AccentFillColorDefaultBrush" Color="#33A474" />
+                            <SolidColorBrush x:Key="AccentFillColorSecondaryBrush" Color="#2F9569" />
+                            <SolidColorBrush x:Key="AccentFillColorTertiaryBrush" Color="#2A845D" />
+                            <SolidColorBrush x:Key="AccentButtonBackground" Color="#33A474" />
+                            <SolidColorBrush x:Key="AccentButtonBackgroundPointerOver" Color="#2F9569" />
+                            <SolidColorBrush x:Key="AccentButtonBackgroundPressed" Color="#2A845D" />
+                            <SolidColorBrush x:Key="NavigationViewSelectionIndicatorForeground" Color="#33A474" />
+                        </ResourceDictionary>
+                        <ResourceDictionary x:Key="Dark">
+                            <Color x:Key="NtfyAccentColor">#4FC28E</Color>
+                            <SolidColorBrush x:Key="NtfyAccentBrush" Color="#4FC28E" />
+                            <SolidColorBrush x:Key="NtfyAccentHoverBrush" Color="#63CE9C" />
+                            <SolidColorBrush x:Key="NtfyAccentTextBrush" Color="#0A1A12" />
+                            <SolidColorBrush x:Key="AccentFillColorDefaultBrush" Color="#4FB07A" />
+                            <SolidColorBrush x:Key="AccentFillColorSecondaryBrush" Color="#47A06E" />
+                            <SolidColorBrush x:Key="AccentFillColorTertiaryBrush" Color="#3F8F62" />
+                            <SolidColorBrush x:Key="AccentButtonBackground" Color="#4FB07A" />
+                            <SolidColorBrush x:Key="AccentButtonBackgroundPointerOver" Color="#47A06E" />
+                            <SolidColorBrush x:Key="AccentButtonBackgroundPressed" Color="#3F8F62" />
+                            <SolidColorBrush x:Key="NavigationViewSelectionIndicatorForeground" Color="#4FB07A" />
+                        </ResourceDictionary>
+                        <ResourceDictionary x:Key="HighContrast">
+                            <SolidColorBrush x:Key="NtfyAccentBrush" Color="{ThemeResource SystemColorHighlightColor}" />
+                            <SolidColorBrush x:Key="NtfyAccentHoverBrush" Color="{ThemeResource SystemColorHighlightColor}" />
+                            <SolidColorBrush x:Key="NtfyAccentTextBrush" Color="{ThemeResource SystemColorHighlightTextColor}" />
+                        </ResourceDictionary>
+                    </ResourceDictionary.ThemeDictionaries>
+                </ResourceDictionary>
+            </ResourceDictionary.MergedDictionaries>
+
+            <!--  Transparent-until-hover icon button for toolbars and list rows.  -->
+            <Style
+                x:Key="SubtleButtonStyle"
+                BasedOn="{StaticResource DefaultButtonStyle}"
+                TargetType="Button">
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="BorderBrush" Value="Transparent" />
+            </Style>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>
