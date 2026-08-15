@@ -1,0 +1,92 @@
+name: Release
+
+# Push a tag like v1.0.2 to build both architectures, package MSIX files
+# (version 1.0.2.0), attach them to a GitHub Release, and submit them to
+# the Microsoft Store (if the MSSTORE_* secrets are configured).
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+env:
+  STORE_APP_ID: 9PJDD0JKR719
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.x
+
+      - name: Set package version from tag
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart('v')
+          if ($version -notmatch '^\d+\.\d+\.\d+$') { throw "Tag must look like v1.2.3, got: ${{ github.ref_name }}" }
+          $manifest = Get-Content Package.appxmanifest -Raw
+          $manifest = $manifest -replace 'Version="\d+\.\d+\.\d+\.\d+"', "Version=""$version.0"""
+          Set-Content Package.appxmanifest $manifest -NoNewline
+          "PKG_VERSION=$version.0" >> $env:GITHUB_ENV
+
+      - name: Build x64
+        run: dotnet build NtfyDesktop.csproj -c Release -p:Platform=x64
+
+      - name: Build ARM64
+        run: dotnet build NtfyDesktop.csproj -c Release -p:Platform=ARM64
+
+      - name: Install winapp CLI
+        shell: pwsh
+        run: |
+          gh release download -R microsoft/winappcli --pattern "winappcli-x64.zip" --dir winappcli
+          Expand-Archive winappcli\winappcli-x64.zip -DestinationPath winappcli\bin
+          $exeDir = (Get-ChildItem winappcli\bin -Recurse -Filter winapp.exe | Select-Object -First 1).DirectoryName
+          $exeDir >> $env:GITHUB_PATH
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Package MSIX (unsigned, for Store)
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory packages | Out-Null
+          winapp package "bin\x64\Release\net9.0-windows10.0.26100.0\win-x64"   --manifest .\Package.appxmanifest --output "packages\notidesk_${env:PKG_VERSION}_x64.msix"
+          winapp package "bin\ARM64\Release\net9.0-windows10.0.26100.0\win-arm64" --manifest .\Package.appxmanifest --output "packages\notidesk_${env:PKG_VERSION}_arm64.msix"
+          Get-ChildItem packages
+
+      - name: Create GitHub Release
+        shell: pwsh
+        run: |
+          gh release create "${{ github.ref_name }}" packages\*.msix `
+            --title "Notidesk ${{ github.ref_name }}" `
+            --generate-notes `
+            --notes "Store-ready unsigned MSIX packages (installed builds come from the Microsoft Store: https://apps.microsoft.com/detail/9PJDD0JKR719)"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Check Store credentials
+        id: store-creds
+        shell: pwsh
+        run: |
+          $configured = "${{ secrets.MSSTORE_CLIENT_ID }}" -ne ""
+          "configured=$($configured.ToString().ToLower())" >> $env:GITHUB_OUTPUT
+          if (-not $configured) { Write-Host "MSSTORE_* secrets not set - skipping Store submission." }
+
+      - name: Setup msstore CLI
+        if: steps.store-creds.outputs.configured == 'true'
+        uses: microsoft/setup-msstore-cli@v1
+
+      - name: Submit to Microsoft Store
+        if: steps.store-creds.outputs.configured == 'true'
+        shell: pwsh
+        run: |
+          msstore reconfigure `
+            --tenantId "${{ secrets.MSSTORE_TENANT_ID }}" `
+            --sellerId "${{ secrets.MSSTORE_SELLER_ID }}" `
+            --clientId "${{ secrets.MSSTORE_CLIENT_ID }}" `
+            --clientSecret "${{ secrets.MSSTORE_CLIENT_SECRET }}"
+          msstore publish packages --appId $env:STORE_APP_ID
