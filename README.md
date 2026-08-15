@@ -1,8 +1,15 @@
-# ntfy desktop (Windows)
+# Notidesk — ntfy desktop client for Windows
 
 A native Windows desktop client for [ntfy](https://ntfy.sh) — subscribe to topics,
 receive native Windows notifications, and publish messages. Built with WinUI 3 and
 the Windows App SDK.
+
+<a href="https://apps.microsoft.com/detail/9PJDD0JKR719">
+  <img src="https://get.microsoft.com/images/en-us%20dark.svg" alt="Get Notidesk from the Microsoft Store" width="200"/>
+</a>
+
+Notidesk is an independent, third-party client and is not affiliated with the
+ntfy project.
 
 ## Features
 
