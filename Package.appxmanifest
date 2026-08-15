@@ -10,15 +10,15 @@
   IgnorableNamespaces="uap rescap com desktop">
 
   <Identity
-    Name="58269ONATAKDUMAN.ntfy"
-    Publisher="CN=1C37C9C5-14A1-478D-AE90-10F709E5CBF1"
-    Version="1.0.0.0" />
+    Name="ONATAKDUMAN.ntfy"
+    Publisher="CN=DF35B028-AD72-4A00-A6F0-EEC2A01EE870"
+    Version="1.0.1.0" />
 
   <mp:PhoneIdentity PhoneProductId="4528EB47-B18E-49F2-84F3-616FC1163BEA" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
   <Properties>
-    <DisplayName>ntfy</DisplayName>
-    <PublisherDisplayName>ONAT AKDUMAN</PublisherDisplayName>
+    <DisplayName>Notidesk</DisplayName>
+    <PublisherDisplayName>Onat Akduman</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
 
@@ -36,8 +36,8 @@
       Executable="$targetnametoken$.exe"
       EntryPoint="$targetentrypoint$">
       <uap:VisualElements
-        DisplayName="ntfy"
-        Description="ntfy desktop client"
+        DisplayName="Notidesk"
+        Description="Notidesk — desktop client for the ntfy notification service"
         BackgroundColor="transparent"
         Square150x150Logo="Assets\Square150x150Logo.png"
         Square44x44Logo="Assets\Square44x44Logo.png">
@@ -51,7 +51,7 @@
         -->
         <com:Extension Category="windows.comServer">
           <com:ComServer>
-            <com:ExeServer Executable="NtfyDesktop.exe" Arguments="----AppNotificationActivated:" DisplayName="ntfy">
+            <com:ExeServer Executable="NtfyDesktop.exe" Arguments="----AppNotificationActivated:" DisplayName="Notidesk">
               <com:Class Id="7e636197-39c2-499c-a27e-0f2e0165d2f9" />
             </com:ExeServer>
           </com:ComServer>

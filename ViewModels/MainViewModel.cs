@@ -126,7 +126,7 @@ public partial class MainViewModel : ObservableObject
 
     /// <summary>Window title: the selected topic, or the app name for "All".</summary>
     public string WindowTitle =>
-        SelectedSubscription is { } sub ? $"{sub.DisplayLabel} — ntfy" : "ntfy";
+        SelectedSubscription is { } sub ? $"{sub.DisplayLabel} — Notidesk" : "Notidesk";
 
     /// <summary>Raised when <see cref="WindowTitle"/> should be re-applied to the window.</summary>
     public event System.Action<string>? WindowTitleChanged;

@@ -356,7 +356,7 @@ public partial class SettingsPageViewModel : ObservableObject
     [ObservableProperty]
     public partial int ThemeIndex { get; set; }
 
-    public string AppVersion => "ntfy 1.0";
+    public string AppVersion => "Notidesk 1.0";
 
     partial void OnDefaultServerUrlChanged(string value)
     {

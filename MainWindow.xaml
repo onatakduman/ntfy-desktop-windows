@@ -10,7 +10,7 @@
     xmlns:tb="using:H.NotifyIcon"
     xmlns:views="using:NtfyDesktop.Views"
     xmlns:vm="using:NtfyDesktop.ViewModels"
-    Title="ntfy"
+    Title="Notidesk"
     mc:Ignorable="d">
 
     <Grid x:Name="RootGrid" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
@@ -21,7 +21,7 @@
 
         <TitleBar
             x:Name="AppTitleBar"
-            Title="ntfy"
+            Title="Notidesk"
             Grid.Row="0">
             <TitleBar.IconSource>
                 <ImageIconSource ImageSource="Assets/AppIcon.ico" />
@@ -260,7 +260,7 @@
             IconSource="Assets/AppIcon.ico"
             LeftClickCommand="{x:Bind ShowCommand}"
             NoLeftClickDelay="True"
-            ToolTipText="ntfy">
+            ToolTipText="Notidesk">
             <tb:TaskbarIcon.ContextFlyout>
                 <MenuFlyout>
                     <MenuFlyoutItem Click="TrayOpen_Click" Text="Open">

@@ -229,7 +229,7 @@ public sealed partial class MainWindow : Window
         {
             await App.Subscriptions.PublishQuickAsync(
                 sub.ServerUrl, sub.Topic,
-                "This is a test notification sent from ntfy Desktop.",
+                "This is a test notification sent from Notidesk.",
                 title: "Test", priority: 3, tags: "white_check_mark");
         }
     }
