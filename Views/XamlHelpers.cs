@@ -41,8 +41,9 @@ public static class XamlHelpers
     //  = Mute glyph,  = Volume glyph (Segoe Fluent Icons).
     public static string MuteGlyph(bool isMuted) => isMuted ? "" : "";
 
+    // Muting only silences toasts; the topic keeps streaming and recording history.
     public static string MuteTooltip(bool isMuted) =>
-        isMuted ? "Unmute (resume streaming)" : "Mute (pause streaming)";
+        isMuted ? "Unmute notifications" : "Mute notifications";
 
     public static InfoBarSeverity ErrorToSeverity(bool isError) =>
         isError ? InfoBarSeverity.Error : InfoBarSeverity.Success;

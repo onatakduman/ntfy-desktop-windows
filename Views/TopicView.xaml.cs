@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using NtfyDesktop.Models;
+using NtfyDesktop.Services;
 using NtfyDesktop.ViewModels;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.System;
@@ -90,24 +91,42 @@ public sealed partial class TopicView : UserControl
         }
     }
 
+    private static readonly HttpClient ActionClient = new() { Timeout = TimeSpan.FromSeconds(30) };
+
     private static async System.Threading.Tasks.Task ExecuteHttpActionAsync(NtfyAction action)
     {
-        if (string.IsNullOrWhiteSpace(action.Url) ||
-            !Uri.TryCreate(action.Url, UriKind.Absolute, out var uri))
+        if (!Uri.TryCreate(action.Url, UriKind.Absolute, out var uri) || !UrlLauncher.IsWeb(uri))
         {
             return;
         }
 
         try
         {
-            using var client = new HttpClient();
             var method = string.IsNullOrWhiteSpace(action.Method) ? "POST" : action.Method!.ToUpperInvariant();
             using var request = new HttpRequestMessage(new HttpMethod(method), uri);
             if (!string.IsNullOrEmpty(action.Body))
             {
                 request.Content = new StringContent(action.Body);
             }
-            await client.SendAsync(request);
+
+            // ntfy http actions may carry headers (e.g. Authorization for the target API);
+            // they used to be dropped, so authenticated actions always failed.
+            if (action.Headers is not null)
+            {
+                foreach (var (name, value) in action.Headers)
+                {
+                    if (!request.Headers.TryAddWithoutValidation(name, value))
+                    {
+                        // Content headers (Content-Type, ...) belong on the content.
+                        request.Content ??= new StringContent(string.Empty);
+                        request.Content.Headers.Remove(name);
+                        request.Content.Headers.TryAddWithoutValidation(name, value);
+                    }
+                }
+            }
+
+            using var response = await ActionClient.SendAsync(request);
+            Debug.WriteLine($"HTTP action '{action.Label}' -> {(int)response.StatusCode}");
         }
         catch (Exception ex)
         {
@@ -157,18 +176,5 @@ public sealed partial class TopicView : UserControl
         }
     }
 
-    private static void OpenUrl(string url)
-    {
-        try
-        {
-            if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
-            {
-                Process.Start(new ProcessStartInfo { FileName = uri.ToString(), UseShellExecute = true });
-            }
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"Open URL failed: {ex.Message}");
-        }
-    }
+    private static void OpenUrl(string url) => UrlLauncher.Open(url);
 }

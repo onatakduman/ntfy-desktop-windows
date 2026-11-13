@@ -58,6 +58,13 @@ public partial class Subscription : ObservableObject
     [ObservableProperty]
     public partial string? Label { get; set; }
 
+    /// <summary>
+    /// ID of the newest message received on this subscription. Used as ntfy's
+    /// <c>since=</c> marker so messages published while the app was closed, asleep or
+    /// offline are fetched on (re)connect. Reset when the server or topic changes.
+    /// </summary>
+    public string? LastMessageId { get; set; }
+
     // --- Runtime-only state (not persisted) ---
 
     [ObservableProperty]

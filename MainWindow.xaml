@@ -253,12 +253,15 @@
             </Grid>
         </Grid>
 
+        <!--
+            The icon image and left-click command are set in code (MainWindow.xaml.cs):
+            IconSource failed silently (blank tray icon), and x:Bind is only evaluated
+            once the window content loads, which never happens when starting in the tray.
+        -->
         <tb:TaskbarIcon
             x:Name="TrayIcon"
             Grid.Row="0"
             ContextMenuMode="SecondWindow"
-            IconSource="Assets/AppIcon.ico"
-            LeftClickCommand="{x:Bind ShowCommand}"
             NoLeftClickDelay="True"
             ToolTipText="Notidesk">
             <tb:TaskbarIcon.ContextFlyout>

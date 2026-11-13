@@ -7,7 +7,8 @@
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
   xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10"
   xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
-  IgnorableNamespaces="uap rescap com desktop">
+  xmlns:uap5="http://schemas.microsoft.com/appx/manifest/uap/windows10/5"
+  IgnorableNamespaces="uap rescap com desktop uap5">
 
   <Identity
     Name="ONATAKDUMAN.ntfy"
@@ -59,6 +60,16 @@
         <desktop:Extension Category="windows.toastNotificationActivation">
           <desktop:ToastNotificationActivation ToastActivatorCLSID="7e636197-39c2-499c-a27e-0f2e0165d2f9" />
         </desktop:Extension>
+        <!--
+          "Start with Windows" (Settings). Off until the user turns it on; when it
+          launches the app at sign-in, the app starts hidden in the tray.
+        -->
+        <uap5:Extension
+          Category="windows.startupTask"
+          Executable="NtfyDesktop.exe"
+          EntryPoint="Windows.FullTrustApplication">
+          <uap5:StartupTask TaskId="NotideskStartup" Enabled="false" DisplayName="Notidesk" />
+        </uap5:Extension>
       </Extensions>
     </Application>
   </Applications>

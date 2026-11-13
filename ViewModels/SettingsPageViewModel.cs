@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using NtfyDesktop.Models;
 using NtfyDesktop.Services;
+using Windows.ApplicationModel;
 
 namespace NtfyDesktop.ViewModels;
 
@@ -40,6 +41,93 @@ public partial class SettingsPageViewModel : ObservableObject
         NotificationSoundIndex = IndexOfSoundKey(s.NotificationSound);
         MinPriorityIndex = System.Math.Clamp(s.MinNotificationPriority - 1, 0, 4);
         _loading = false;
+
+        _ = LoadStartupStateAsync();
+    }
+
+    // --- Start with Windows (packaged StartupTask declared in Package.appxmanifest) ---
+
+    private const string StartupTaskId = "NotideskStartup";
+
+    /// <summary>Set while the toggle is being synced from the OS state (not a user change).</summary>
+    private bool _syncingStartup;
+
+    [ObservableProperty]
+    public partial bool LaunchAtStartup { get; set; }
+
+    /// <summary>False when Windows doesn't let the app change the setting itself.</summary>
+    [ObservableProperty]
+    public partial bool CanChangeLaunchAtStartup { get; set; }
+
+    /// <summary>Explains why the toggle is off/locked (e.g. disabled in Task Manager).</summary>
+    [ObservableProperty]
+    public partial string? StartupStatusText { get; set; }
+
+    private async Task LoadStartupStateAsync()
+    {
+        try
+        {
+            var task = await StartupTask.GetAsync(StartupTaskId);
+            ShowStartupState(task.State);
+        }
+        catch (System.Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"StartupTask lookup failed: {ex.Message}");
+            CanChangeLaunchAtStartup = false;
+            StartupStatusText = "Not available in this build of the app.";
+        }
+    }
+
+    partial void OnLaunchAtStartupChanged(bool value)
+    {
+        if (!_syncingStartup)
+        {
+            _ = ApplyStartupAsync(value);
+        }
+    }
+
+    private async Task ApplyStartupAsync(bool enable)
+    {
+        try
+        {
+            var task = await StartupTask.GetAsync(StartupTaskId);
+            if (enable)
+            {
+                ShowStartupState(await task.RequestEnableAsync());
+            }
+            else
+            {
+                task.Disable();
+                ShowStartupState(task.State);
+            }
+        }
+        catch (System.Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"StartupTask change failed: {ex.Message}");
+            await LoadStartupStateAsync();
+        }
+    }
+
+    private void ShowStartupState(StartupTaskState state)
+    {
+        _syncingStartup = true;
+        try
+        {
+            LaunchAtStartup = state is StartupTaskState.Enabled or StartupTaskState.EnabledByPolicy;
+            CanChangeLaunchAtStartup = state is StartupTaskState.Enabled or StartupTaskState.Disabled;
+            StartupStatusText = state switch
+            {
+                StartupTaskState.DisabledByUser =>
+                    "Turned off in Windows. Re-enable Notidesk under Settings > Apps > Startup (or Task Manager > Startup apps).",
+                StartupTaskState.DisabledByPolicy => "Turned off by your organization's policy.",
+                StartupTaskState.EnabledByPolicy => "Turned on by your organization's policy.",
+                _ => null,
+            };
+        }
+        finally
+        {
+            _syncingStartup = false;
+        }
     }
 
     // --- Notification sound + minimum priority ---
@@ -356,7 +444,21 @@ public partial class SettingsPageViewModel : ObservableObject
     [ObservableProperty]
     public partial int ThemeIndex { get; set; }
 
-    public string AppVersion => "Notidesk 1.0";
+    public string AppVersion
+    {
+        get
+        {
+            try
+            {
+                var v = Package.Current.Id.Version;
+                return $"Notidesk {v.Major}.{v.Minor}.{v.Build}";
+            }
+            catch (System.Exception)
+            {
+                return "Notidesk";
+            }
+        }
+    }
 
     partial void OnDefaultServerUrlChanged(string value)
     {

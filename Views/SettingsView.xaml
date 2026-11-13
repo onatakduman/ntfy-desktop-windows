@@ -182,6 +182,38 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <StackPanel Grid.Column="0" Spacing="2">
+                            <TextBlock Text="Start with Windows" />
+                            <TextBlock
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                Style="{StaticResource CaptionTextBlockStyle}"
+                                Text="Launch when you sign in, minimized to the tray." />
+                            <TextBlock
+                                Foreground="{ThemeResource SystemFillColorCautionBrush}"
+                                Style="{StaticResource CaptionTextBlockStyle}"
+                                Text="{x:Bind ViewModel.StartupStatusText, Mode=OneWay}"
+                                TextWrapping="Wrap"
+                                Visibility="{x:Bind helpers:XamlHelpers.StringToVisibility(ViewModel.StartupStatusText), Mode=OneWay}" />
+                        </StackPanel>
+                        <ToggleSwitch
+                            Grid.Column="1"
+                            AutomationProperties.AutomationId="StartupToggle"
+                            IsEnabled="{x:Bind ViewModel.CanChangeLaunchAtStartup, Mode=OneWay}"
+                            IsOn="{x:Bind ViewModel.LaunchAtStartup, Mode=TwoWay}" />
+                    </Grid>
+                </Border>
+
+                <Border
+                    Padding="16"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="{StaticResource ControlCornerRadius}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" Spacing="2">
                             <TextBlock Text="Appearance" />
                             <TextBlock
                                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"

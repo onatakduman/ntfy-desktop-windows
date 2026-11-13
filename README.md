@@ -23,8 +23,15 @@ ntfy project.
   markdown, click URL, attachments (URL or local file), email, delayed delivery,
   and message templating.
 - **System tray**: closing the window keeps the app streaming in the background.
+  Single instance: opening the app again brings the running window back.
+- **Reliable streaming**: dead connections (e.g. after sleep) are detected and
+  re-established, and messages published while the app was closed or offline are
+  fetched on reconnect.
+- Messages you publish from the app don't notify you (the "Send test notification"
+  menu item still does).
 - **Accounts**: save credentials per server and pick them when subscribing/publishing.
-- Light / Dark / System themes, launch on startup, and start minimized to tray.
+- Light / Dark / System themes, and **Start with Windows** (launches at sign-in,
+  minimized to the tray).
 
 ## Requirements
 

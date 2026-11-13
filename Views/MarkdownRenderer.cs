@@ -75,7 +75,8 @@ public static class MarkdownRenderer
             {
                 var link = new Hyperlink();
                 var url = m.Groups["url"].Value.Trim();
-                if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
+                // Only web/mail links are clickable (message content is untrusted).
+                if (NtfyDesktop.Services.UrlLauncher.ToSafeUri(url) is { } uri)
                 {
                     link.NavigateUri = uri;
                 }

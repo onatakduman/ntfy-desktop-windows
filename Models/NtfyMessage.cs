@@ -64,6 +64,13 @@ public sealed class NtfyMessage
     [JsonPropertyName("serverUrl")]
     public string ServerUrl { get; set; } = string.Empty;
 
+    /// <summary>
+    /// True when this message was published by this client (runtime only). Such
+    /// messages are kept in history but raise no toast and no unread badge.
+    /// </summary>
+    [JsonIgnore]
+    public bool IsOwn { get; set; }
+
     // --- Display helpers (computed, not serialized round-trip-critical) ---
 
     [JsonIgnore]
@@ -268,4 +275,8 @@ public sealed class NtfyAction
 
     [JsonPropertyName("clear")]
     public bool Clear { get; set; }
+
+    /// <summary>Request headers for "http" actions (e.g. Authorization).</summary>
+    [JsonPropertyName("headers")]
+    public Dictionary<string, string>? Headers { get; set; }
 }

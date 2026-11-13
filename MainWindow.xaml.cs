@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
@@ -8,7 +9,10 @@ using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
+using Microsoft.UI.Xaml.Media;
 using NtfyDesktop.Models;
+using NtfyDesktop.Services;
 using NtfyDesktop.ViewModels;
 using NtfyDesktop.Views;
 using Windows.Graphics;
@@ -74,10 +78,20 @@ public sealed partial class MainWindow : Window
         InitializeComponent();
 
         ShowCommand = new RelayCommand(ShowAndActivate);
+        SetUpTrayIcon();
 
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
-        AppWindow.SetIcon("Assets/AppIcon.ico");
+        try
+        {
+            // Absolute path: a packaged app's working directory is System32, so the
+            // old relative "Assets/AppIcon.ico" didn't resolve when started from Start.
+            AppWindow.SetIcon(AppIcon.FilePath);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Setting the window icon failed: {ex.Message}");
+        }
 
         ApplyTheme(App.Settings.Theme);
 
@@ -91,14 +105,19 @@ public sealed partial class MainWindow : Window
 
         AppWindow.Closing += AppWindow_Closing;
 
+        // Clicking the topic that is already selected doesn't change the selection,
+        // so it never left the Settings pane. Listen for taps (handled ones too, since
+        // the list item handles them) and leave Settings explicitly.
+        TopicList.AddHandler(UIElement.TappedEvent, new Microsoft.UI.Xaml.Input.TappedEventHandler(TopicList_Tapped), handledEventsToo: true);
+
         // Reflect the selected topic in the window/title-bar title.
         ViewModel.WindowTitleChanged += t =>
         {
             Title = t;
             AppTitleBar.Title = t;
         };
-        // NavigationView.SelectedItem is bound TwoWay to ViewModel.SelectedEntry, so
-        // programmatic selection changes flow automatically — no manual sync needed.
+        // The sidebar ListView's SelectedItem is bound TwoWay to ViewModel.SelectedEntry,
+        // so programmatic selection changes flow automatically — no manual sync needed.
     }
 
     /// <summary>Applies the persisted theme to the window's root element.</summary>
@@ -148,34 +167,28 @@ public sealed partial class MainWindow : Window
         ViewModel.ShowSettings = true;
     }
 
-    private void NavView_ItemInvoked(NavigationView sender, NavigationViewItemInvokedEventArgs args)
+    private void TopicList_Tapped(object sender, Microsoft.UI.Xaml.Input.TappedRoutedEventArgs e)
     {
-        // Clicking any topic returns from the Settings pane to the feed.
-        if (args.InvokedItemContainer?.DataContext is not NavEntry { IsHeader: true })
+        if (!ViewModel.ShowSettings)
         {
-            ViewModel.ShowSettings = false;
-        }
-    }
-
-    private void NavView_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
-    {
-        // The "Subscribed topics" header is not selectable — revert to the last real
-        // entry (the TwoWay SelectedItem binding may have already set it momentarily).
-        if (args.SelectedItem is NavEntry { IsHeader: true })
-        {
-            // Setting SelectedItem flows back to the view model via the TwoWay binding.
-            sender.SelectedItem = _lastSelectableEntry ?? ViewModel.Entries.FirstOrDefault(e => !e.IsHeader);
             return;
         }
 
-        // Remember the last selectable (non-header) entry for header reverts.
-        if (args.SelectedItem is NavEntry entry)
+        for (var element = e.OriginalSource as DependencyObject;
+             element is not null && element != TopicList;
+             element = VisualTreeHelper.GetParent(element))
         {
-            _lastSelectableEntry = entry;
+            if (element is ButtonBase)
+            {
+                return; // the row's "More" menu button
+            }
+            if (element is ListViewItem { Content: NavEntry { IsHeader: false } })
+            {
+                ViewModel.ShowSettings = false;
+                return;
+            }
         }
     }
-
-    private NavEntry? _lastSelectableEntry;
 
     // --- Per-topic sidebar menu ---
 
@@ -227,10 +240,12 @@ public sealed partial class MainWindow : Window
     {
         if (SubFrom(sender) is { } sub)
         {
+            // notifySelf: the whole point of a test is to see the toast, so it is not
+            // filtered out like other messages published from this app.
             await App.Subscriptions.PublishQuickAsync(
                 sub.ServerUrl, sub.Topic,
                 "This is a test notification sent from Notidesk.",
-                title: "Test", priority: 3, tags: "white_check_mark");
+                title: "Test", priority: 3, tags: "white_check_mark", notifySelf: true);
         }
     }
 
@@ -277,14 +292,24 @@ public sealed partial class MainWindow : Window
 
     private void AppWindow_Closing(AppWindow sender, AppWindowClosingEventArgs args)
     {
-        if (_forceClose || !App.Settings.MinimizeToTrayOnClose)
+        if (_forceClose)
         {
             return;
         }
 
-        // Hide to tray instead of exiting; background streaming keeps running.
         args.Cancel = true;
-        AppWindow.Hide();
+
+        if (App.Settings.MinimizeToTrayOnClose)
+        {
+            // Hide to tray instead of exiting; background streaming keeps running.
+            AppWindow.Hide();
+            return;
+        }
+
+        // Tray mode off: closing the window quits the app. Just letting the window
+        // close left the process running (the tray menu's hidden helper window keeps
+        // it alive) with a tray icon whose "Open" no longer worked.
+        App.ExitApplication();
     }
 
     /// <summary>Shows the window and brings it to the foreground.</summary>
@@ -299,6 +324,32 @@ public sealed partial class MainWindow : Window
 
         var hwnd = Win32Interop.GetWindowFromWindowId(AppWindow.Id);
         SetForegroundWindow(hwnd);
+    }
+
+    /// <summary>
+    /// Sets the tray icon's image and click command in code and creates it right
+    /// away. The XAML <c>IconSource</c> left the icon blank (see <see cref="AppIcon"/>),
+    /// and the default creation on <c>Loaded</c> never happens when the app starts
+    /// hidden in the tray, because the window content isn't loaded until first shown.
+    /// </summary>
+    private void SetUpTrayIcon()
+    {
+        TrayIcon.LeftClickCommand = ShowCommand;
+
+        if (AppIcon.LoadTrayIcon() is { } icon)
+        {
+            TrayIcon.Icon = icon;
+        }
+
+        try
+        {
+            TrayIcon.ForceCreate(enablesEfficiencyMode: false);
+        }
+        catch (Exception ex)
+        {
+            // Not fatal: the control retries when the window content loads.
+            Debug.WriteLine($"Creating the tray icon failed: {ex}");
+        }
     }
 
     /// <summary>Allows the next close to actually close the window (used by tray "Exit").</summary>

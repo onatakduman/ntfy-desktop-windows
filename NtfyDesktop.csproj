@@ -19,6 +19,8 @@
       them and the partial properties have no implementation part.
     -->
     <LangVersion>preview</LangVersion>
+    <!-- Program.cs provides Main (single-instance redirection). -->
+    <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
@@ -31,6 +33,14 @@
     <Content Include="Assets\StoreLogo.png" />
     <Content Include="Assets\AppIcon.ico" />
     <Content Include="Assets\Wide310x150Logo.scale-200.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      The tray icon is loaded from this embedded copy (see Services/AppIcon.cs) so it
+      never depends on loose files, the working directory or ms-appx resolution.
+    -->
+    <EmbeddedResource Include="Assets\AppIcon.ico" LogicalName="NtfyDesktop.AppIcon.ico" />
   </ItemGroup>
 
   <ItemGroup>

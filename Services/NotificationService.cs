@@ -114,13 +114,14 @@ public sealed class NotificationService
             }
 
             // Icon as the app-logo override; image attachments as an inline image.
-            if (message.IconUri is not null)
+            // Only web images: these URLs come from whoever published the message.
+            if (UrlLauncher.IsWeb(message.IconUri))
             {
-                builder.SetAppLogoOverride(message.IconUri, AppNotificationImageCrop.Circle);
+                builder.SetAppLogoOverride(message.IconUri!, AppNotificationImageCrop.Circle);
             }
-            if (message.HasImageAttachment && message.AttachmentUri is not null)
+            if (message.HasImageAttachment && UrlLauncher.IsWeb(message.AttachmentUri))
             {
-                builder.SetInlineImage(message.AttachmentUri);
+                builder.SetInlineImage(message.AttachmentUri!);
             }
 
             // "view" action buttons open their URL directly.
@@ -134,7 +135,7 @@ public sealed class NotificationService
                         break;
                     }
                     if (string.Equals(action.Action, "view", StringComparison.OrdinalIgnoreCase) &&
-                        Uri.TryCreate(action.Url, UriKind.Absolute, out var aUri))
+                        UrlLauncher.ToSafeUri(action.Url) is { } aUri)
                     {
                         builder.AddButton(new AppNotificationButton(action.Label ?? "Open").SetInvokeUri(aUri));
                         count++;
@@ -208,33 +209,23 @@ public sealed class NotificationService
         }
     }
 
-    private void OnNotificationInvoked(AppNotificationManager sender, AppNotificationActivatedEventArgs args)
+    private void OnNotificationInvoked(AppNotificationManager sender, AppNotificationActivatedEventArgs args) =>
+        HandleActivation(args);
+
+    /// <summary>
+    /// Handles a click on one of our toasts: brings the window to the front and
+    /// opens the message's click URL. Called for clicks while the app is running
+    /// (<see cref="AppNotificationManager.NotificationInvoked"/>) and, from
+    /// <c>App.OnLaunched</c>, when the click is what started the app.
+    /// </summary>
+    public void HandleActivation(AppNotificationActivatedEventArgs args)
     {
         // Bring the app to the foreground on any toast body click.
         App.DispatcherQueue?.TryEnqueue(() => App.ShowMainWindow());
 
         if (args.Arguments.TryGetValue("click", out var url) && !string.IsNullOrWhiteSpace(url))
         {
-            TryOpenUrl(url);
-        }
-    }
-
-    private static void TryOpenUrl(string url)
-    {
-        try
-        {
-            if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
-            {
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = uri.ToString(),
-                    UseShellExecute = true,
-                });
-            }
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"Open URL failed: {ex.Message}");
+            UrlLauncher.Open(url);
         }
     }
 }

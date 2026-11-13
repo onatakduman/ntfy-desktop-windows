@@ -228,7 +228,8 @@ public partial class MainViewModel : ObservableObject
     private void OnMessageReceived(NtfyMessage message)
     {
         // Bump the unread badge for topics that aren't currently being viewed.
-        if (IsAllSelected)
+        // Messages we published ourselves are never "unread".
+        if (message.IsOwn || IsAllSelected)
         {
             return;
         }
@@ -236,7 +237,7 @@ public partial class MainViewModel : ObservableObject
         {
             if (entry.Subscription is { } sub &&
                 sub.Topic == message.Topic &&
-                sub.ServerUrl == message.ServerUrl &&
+                ServerCredential.SameServer(sub.ServerUrl, message.ServerUrl) &&
                 entry != SelectedEntry)
             {
                 entry.UnreadCount++;

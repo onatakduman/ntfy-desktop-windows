@@ -1,4 +1,6 @@
 using Microsoft.UI.Xaml;
+using Microsoft.Windows.AppLifecycle;
+using Microsoft.Windows.AppNotifications;
 using NtfyDesktop.Models;
 using NtfyDesktop.Services;
 using NtfyDesktop.ViewModels;
@@ -74,6 +76,18 @@ public partial class App : Application
     {
         DispatcherQueue = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
 
+        // How we were started: a normal launch, Windows sign-in (startup task) or a
+        // click on one of our toasts while the app wasn't running.
+        AppActivationArguments? activation = null;
+        try
+        {
+            activation = AppInstance.GetCurrent().GetActivatedEventArgs();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"GetActivatedEventArgs failed: {ex.Message}");
+        }
+
         Persistence = new PersistenceService();
         Settings = Persistence.LoadSettings();
 
@@ -87,12 +101,45 @@ public partial class App : Application
         Main = new MainViewModel();
 
         Window = new MainWindow();
-        Window.Activate();
+
+        if (activation?.Kind == ExtendedActivationKind.StartupTask)
+        {
+            // Started at sign-in ("Start with Windows"): stay in the tray. The tray
+            // icon exists already (MainWindow creates it up front) and streaming runs;
+            // the window appears on a tray click, a toast click or "Open".
+        }
+        else
+        {
+            Window.Activate();
+        }
+
+        // A toast click that launched the app isn't raised as NotificationInvoked;
+        // handle it here so its click URL still opens.
+        if (activation?.Kind == ExtendedActivationKind.AppNotification &&
+            activation.Data is AppNotificationActivatedEventArgs toastArgs)
+        {
+            Notifications.HandleActivation(toastArgs);
+        }
+    }
+
+    /// <summary>
+    /// Called (on a background thread) when another launch of the app was redirected
+    /// to this instance, e.g. the user opened Notidesk from Start while it was
+    /// running in the tray: show the existing window.
+    /// </summary>
+    public static void OnRedirectedActivation(AppActivationArguments args)
+    {
+        if (args.Kind == ExtendedActivationKind.StartupTask)
+        {
+            return; // already running; nothing to show at sign-in
+        }
+        DispatcherQueue?.TryEnqueue(ShowMainWindow);
     }
 
     private static void OnMessageReceived(NtfyMessage message)
     {
-        if (!Settings.NotificationsEnabled)
+        // Messages published from this app are kept in history but not announced.
+        if (message.IsOwn || !Settings.NotificationsEnabled)
         {
             return;
         }

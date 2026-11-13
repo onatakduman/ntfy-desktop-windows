@@ -19,6 +19,9 @@ public partial class SubscribeDialogViewModel : ObservableObject
 {
     private const string PublicServer = "https://ntfy.sh";
 
+    private static readonly System.Text.RegularExpressions.Regex ValidTopic =
+        new("^[-_A-Za-z0-9]{1,64}$", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
     private readonly SubscriptionManager _manager;
     private readonly Subscription? _editing;
     private readonly List<ServerCredential> _creds;
@@ -212,6 +215,23 @@ public partial class SubscribeDialogViewModel : ObservableObject
             return false;
         }
 
+        // ntfy only accepts these characters; anything else would leave the
+        // subscription stuck in an error/reconnect loop.
+        if (!ValidTopic.IsMatch(topic))
+        {
+            ValidationError = "Topic names can only contain letters, numbers, - and _ (max. 64 characters).";
+            return false;
+        }
+
+        if (_manager.Subscriptions.Any(s =>
+                s != _editing &&
+                s.Topic == topic &&
+                ServerCredential.SameServer(s.ServerUrl, server)))
+        {
+            ValidationError = "You are already subscribed to this topic.";
+            return false;
+        }
+
         _pendingServer = server;
         _pendingTopic = topic;
         _pendingAuthMode = authMode;
@@ -231,6 +251,12 @@ public partial class SubscribeDialogViewModel : ObservableObject
     {
         if (_editing is { } existing)
         {
+            if (existing.Topic != _pendingTopic ||
+                !ServerCredential.SameServer(existing.ServerUrl, _pendingServer))
+            {
+                // The resume marker belongs to the old topic/server.
+                existing.LastMessageId = null;
+            }
             existing.ServerUrl = _pendingServer;
             existing.Topic = _pendingTopic;
             existing.AuthMode = _pendingAuthMode;

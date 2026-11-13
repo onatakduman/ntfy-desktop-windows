@@ -48,6 +48,13 @@ public sealed class PublishOptions
     /// <summary>Raw X-Actions header value (e.g. "view, Open, https://...").</summary>
     public string? Actions { get; set; }
 
+    /// <summary>
+    /// When false (the default), the copy of this message that comes back on our own
+    /// subscription is recorded in history but does not raise a Windows notification.
+    /// "Send test notification" sets this to true, since showing a toast is its purpose.
+    /// </summary>
+    public bool NotifySelf { get; set; }
+
     // Optional explicit auth; otherwise resolved from saved credentials by server.
     public AuthMode AuthMode { get; set; } = AuthMode.None;
 
