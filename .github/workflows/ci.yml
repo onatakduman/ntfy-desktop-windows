@@ -17,4 +17,7 @@ jobs:
           dotnet-version: 9.x
 
       - name: Build (Release x64)
-        run: dotnet build NtfyDesktop.csproj -c Release -p:Platform=x64
+        run: dotnet build NtfyDesktop.csproj -c Release -p:Platform=x64 -r win-x64
+
+      - name: Build (Release ARM64)
+        run: dotnet build NtfyDesktop.csproj -c Release -p:Platform=ARM64 -r win-arm64

@@ -34,11 +34,13 @@ jobs:
           Set-Content Package.appxmanifest $manifest -NoNewline
           "PKG_VERSION=$version.0" >> $env:GITHUB_ENV
 
+      # -r is explicit: the project otherwise picks the runtime from the build
+      # machine's architecture (x64), which breaks the ARM64 build.
       - name: Build x64
-        run: dotnet build NtfyDesktop.csproj -c Release -p:Platform=x64
+        run: dotnet build NtfyDesktop.csproj -c Release -p:Platform=x64 -r win-x64
 
       - name: Build ARM64
-        run: dotnet build NtfyDesktop.csproj -c Release -p:Platform=ARM64
+        run: dotnet build NtfyDesktop.csproj -c Release -p:Platform=ARM64 -r win-arm64
 
       - name: Install winapp CLI
         shell: pwsh
