@@ -30,7 +30,12 @@ jobs:
           $version = "${{ github.ref_name }}".TrimStart('v')
           if ($version -notmatch '^\d+\.\d+\.\d+$') { throw "Tag must look like v1.2.3, got: ${{ github.ref_name }}" }
           $manifest = Get-Content Package.appxmanifest -Raw
-          $manifest = $manifest -replace 'Version="\d+\.\d+\.\d+\.\d+"', "Version=""$version.0"""
+          # Only the Identity Version: the (?<![\w]) guard keeps MinVersion /
+          # MaxVersionTested (the supported Windows versions) untouched.
+          $pattern = '(?<![\w])Version="\d+\.\d+\.\d+\.\d+"'
+          $count = ([regex]::Matches($manifest, $pattern)).Count
+          if ($count -ne 1) { throw "Expected exactly one Identity Version in Package.appxmanifest, found $count" }
+          $manifest = [regex]::Replace($manifest, $pattern, "Version=""$version.0""")
           Set-Content Package.appxmanifest $manifest -NoNewline
           "PKG_VERSION=$version.0" >> $env:GITHUB_ENV
 
@@ -60,13 +65,36 @@ jobs:
           winapp package "bin\ARM64\Release\net9.0-windows10.0.26100.0\win-arm64" --manifest .\Package.appxmanifest --output "packages\notidesk_${env:PKG_VERSION}_arm64.msix"
           Get-ChildItem packages
 
+      # The Store takes one upload per submission, so both architectures go into
+      # a single bundle (msstore publish doesn't accept a folder of .msix files).
+      - name: Bundle MSIX packages
+        shell: pwsh
+        run: |
+          # makeappx from the Windows SDK BuildTools package the build restored
+          # (pinned in NtfyDesktop.csproj), so it knows the manifest schemas.
+          $makeappx = Get-ChildItem "$env:USERPROFILE\.nuget\packages\microsoft.windows.sdk.buildtools" -Recurse -Filter makeappx.exe |
+            Where-Object { $_.FullName -match '\\x64\\' } | Sort-Object FullName -Descending | Select-Object -First 1
+          if (-not $makeappx) { throw "makeappx.exe not found in the SDK BuildTools package" }
+          Write-Host "makeappx: $($makeappx.FullName)"
+          New-Item -ItemType Directory bundle | Out-Null
+          & $makeappx.FullName bundle /d packages /p "bundle\notidesk_${env:PKG_VERSION}.msixbundle" /bv $env:PKG_VERSION /o
+          if ($LASTEXITCODE -ne 0) { throw "makeappx bundle failed ($LASTEXITCODE)" }
+          Get-ChildItem bundle
+
       - name: Create GitHub Release
         shell: pwsh
         run: |
-          gh release create "${{ github.ref_name }}" packages\*.msix `
-            --title "Notidesk ${{ github.ref_name }}" `
-            --generate-notes `
-            --notes "Store-ready unsigned MSIX packages (installed builds come from the Microsoft Store: https://apps.microsoft.com/detail/9PJDD0JKR719)"
+          $assets = @(Get-ChildItem packages\*.msix) + @(Get-ChildItem bundle\*.msixbundle) | ForEach-Object FullName
+          gh release view "${{ github.ref_name }}" *> $null
+          if ($LASTEXITCODE -eq 0) {
+            # Re-run of the same tag: replace the assets instead of failing.
+            gh release upload "${{ github.ref_name }}" $assets --clobber
+          } else {
+            gh release create "${{ github.ref_name }}" $assets `
+              --title "Notidesk ${{ github.ref_name }}" `
+              --generate-notes `
+              --notes "Store-ready unsigned MSIX packages (installed builds come from the Microsoft Store: https://apps.microsoft.com/detail/9PJDD0JKR719)"
+          }
         env:
           GH_TOKEN: ${{ github.token }}
 
@@ -91,4 +119,4 @@ jobs:
             --sellerId "${{ secrets.MSSTORE_SELLER_ID }}" `
             --clientId "${{ secrets.MSSTORE_CLIENT_ID }}" `
             --clientSecret "${{ secrets.MSSTORE_CLIENT_SECRET }}"
-          msstore publish packages --appId $env:STORE_APP_ID
+          msstore publish "bundle\notidesk_${env:PKG_VERSION}.msixbundle" --appId $env:STORE_APP_ID
